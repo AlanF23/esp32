@@ -1,1 +1,0 @@
-print("Ari te amo uwu")
