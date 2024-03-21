@@ -18,7 +18,7 @@ from mqtt_local import config
 import uasyncio as asyncio
 import dht, machine
 
-d = dht.DHT22(machine.Pin(13))
+d = dht.DHT22(machine.Pin(25))
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -29,8 +29,8 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('temperatura', 1)
-    await client.subscribe('humedad', 1)
+    await client.subscribe('alan/temperatura', 1)
+    await client.subscribe('alan/humedad', 1)
 
 async def main(client):
     await client.connect()
@@ -41,12 +41,12 @@ async def main(client):
             d.measure()
             try:
                 temperatura=d.temperature()
-                await client.publish('temperatura', '{}'.format(temperatura), qos = 1)
+                await client.publish('alan/temperatura', '{}'.format(temperatura), qos = 1)
             except OSError as e:
                 print("sin sensor temperatura")
             try:
                 humedad=d.humidity()
-                await client.publish('humedad', '{}'.format(humedad), qos = 1)
+                await client.publish('alan/humedad', '{}'.format(humedad), qos = 1)
             except OSError as e:
                 print("sin sensor humedad")
         except OSError as e:
