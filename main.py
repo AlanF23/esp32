@@ -17,8 +17,13 @@ from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
 import dht, machine
+import ubinascii
+
+import btree
 
 d = dht.DHT22(machine.Pin(25))
+CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
+periodo = 20
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -29,8 +34,12 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('alan/temperatura', 1)
-    await client.subscribe('alan/humedad', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/temperatura', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/humedad', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/setpoint', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/periodo', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/modo', 1)
+    await client.subscribe('alan/'+CLIENT_ID+'/rele', 1)
 
 async def main(client):
     await client.connect()
@@ -41,17 +50,21 @@ async def main(client):
             d.measure()
             try:
                 temperatura=d.temperature()
-                await client.publish('alan/temperatura', '{}'.format(temperatura), qos = 1)
+                await client.publish('alan/'+CLIENT_ID+'/temperatura', '{}'.format(temperatura), qos = 1)
             except OSError as e:
                 print("sin sensor temperatura")
             try:
                 humedad=d.humidity()
-                await client.publish('alan/humedad', '{}'.format(humedad), qos = 1)
+                await client.publish('alan/'+CLIENT_ID+'/humedad', '{}'.format(humedad), qos = 1)
             except OSError as e:
-                print("sin sensor humedad")
+                print("sin sensor humedad")  
         except OSError as e:
             print("sin sensor")
-        await asyncio.sleep(20)  # Broker is slow
+        try:
+            await client.publish('alan/'+CLIENT_ID+'/periodo', '{}'.format(periodo), qos = 1)
+        except:
+            print("No se definio periodo")
+        await asyncio.sleep(periodo)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
