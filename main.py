@@ -29,7 +29,7 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('result', 1)
+    await client.subscribe('esp32_alan', 1)
 
 async def main(client):
     await client.connect()
@@ -38,7 +38,7 @@ async def main(client):
     while True:
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
-        await client.publish('result', '{} {}'.format(n, client.REPUB_COUNT), qos = 1)
+        await client.publish('esp32_alan', '{} {}'.format(n, client.REPUB_COUNT), qos = 1)
         n += 1
         await asyncio.sleep(10)  # Broker is slow
 
