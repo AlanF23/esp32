@@ -20,6 +20,7 @@ import dht, machine
 import ubinascii
 
 import btree
+import json
 
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
@@ -48,6 +49,11 @@ async def main(client):
     while True:
         try:
             d.measure()
+            datos = {
+                'temperatura': d.temperature(),
+                'humedad': d.humidity(),
+                'periodo': periodo
+            }
             try:
                 temperatura=d.temperature()
                 await client.publish('alan/'+CLIENT_ID+'/temperatura', '{}'.format(temperatura), qos = 1)
