@@ -20,11 +20,37 @@ import dht, machine
 import ubinascii
 
 import btree
-import json
+import ujson
 
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
-periodo = 20
+periodo = 3
+rele = "apagado"
+setpoint = 26
+modo = "manual"
+
+# Función para inicializar la base de datos
+def init_db():
+    try:
+        with open('config.db', 'r+b') as f:
+            return btree.open(f)
+    except OSError:
+        with open('config.db', 'w+b') as f:
+            return btree.open(f)
+
+# Función para almacenar datos en la base de datos
+def store_data(db, key, value):
+    db[key] = ujson.dumps(value)
+
+# Función para recuperar datos de la base de datos
+def retrieve_data(db, key):
+    if key in db:
+        return ujson.loads(db[key])
+    else:
+        return None
+
+# Inicializar la base de datos
+db = init_db()
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -35,12 +61,11 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('alan/'+CLIENT_ID+'/temperatura', 1)
-    await client.subscribe('alan/'+CLIENT_ID+'/humedad', 1)
-    await client.subscribe('alan/'+CLIENT_ID+'/setpoint', 1)
-    await client.subscribe('alan/'+CLIENT_ID+'/periodo', 1)
-    await client.subscribe('alan/'+CLIENT_ID+'/modo', 1)
-    await client.subscribe('alan/'+CLIENT_ID+'/rele', 1)
+    await client.subscribe('setpoint', 1)
+    await client.subscribe('periodo', 1)
+    await client.subscribe('destello', 1)
+    await client.subscribe('modo', 1)
+    await client.subscribe('rele', 1)
 
 async def main(client):
     await client.connect()
@@ -52,24 +77,39 @@ async def main(client):
             datos = {
                 'temperatura': d.temperature(),
                 'humedad': d.humidity(),
-                'periodo': periodo
+                'setpoint': setpoint,
+                'periodo': periodo,
+                'modo': modo
             }
             try:
-                temperatura=d.temperature()
-                await client.publish('alan/'+CLIENT_ID+'/temperatura', '{}'.format(temperatura), qos = 1)
+                await client.publish('alan/'+CLIENT_ID, ujson.dumps(datos), qos=1)
             except OSError as e:
-                print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('alan/'+CLIENT_ID+'/humedad', '{}'.format(humedad), qos = 1)
-            except OSError as e:
-                print("sin sensor humedad")  
+                print("Error al publicar datos:", e)
         except OSError as e:
-            print("sin sensor")
+            print("Error al medir los datos")
         try:
-            await client.publish('alan/'+CLIENT_ID+'/periodo', '{}'.format(periodo), qos = 1)
-        except:
-            print("No se definio periodo")
+            parametros = {
+                'setpoint': setpoint,
+                'periodo': periodo,
+                'modo': modo,
+                'rele': rele
+            }
+            # Almacenar el diccionario completo en la base de datos
+            store_data(db, 'parametros', parametros)
+        except OSError as e:
+            print("Error al guardar los parametros")
+        try:
+            if modo == "automatico":
+                if datos['temperatura'] > setpoint:
+                    rele = "encendido"
+                    #codigo que active el pin del relé
+                else:
+                    rele = "apagado"
+            if modo == "manual":
+                # y aca ya no sé xd
+                pass
+        except OSError as e:
+            print("El relé no funciona")
         await asyncio.sleep(periodo)  # Broker is slow
 
 # Define configuration
