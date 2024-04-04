@@ -20,15 +20,31 @@ import dht, machine
 import ubinascii
 
 import btree
-import ujson
+import json
 
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
-periodo = 3
+periodo = 20
 rele = "apagado"
 setpoint = 26
 modo = "manual"
 
+def sub_cb(topic, msg, retained):
+    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
+
+async def wifi_han(state):
+    print('Wifi is ', 'up' if state else 'down')
+    await asyncio.sleep(1)
+
+# If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
+async def conn_han(client):
+    await client.subscribe('alan/setpoint', 1)
+    await client.subscribe('alan/periodo', 1)
+    await client.subscribe('alan/destello', 1)
+    await client.subscribe('alan/modo', 1)
+    await client.subscribe('alan/rele', 1)
+    await client.subscribe('alan/'+CLIENT_ID, 1)
+'''
 # Función para inicializar la base de datos
 def init_db():
     try:
@@ -40,49 +56,38 @@ def init_db():
 
 # Función para almacenar datos en la base de datos
 def store_data(db, key, value):
-    db[key] = ujson.dumps(value)
+    try:
+        db[key] = json.dumps(value)
+    except Exception as e:
+        print("Error al almacenar datos:", e)
 
 # Función para recuperar datos de la base de datos
 def retrieve_data(db, key):
     if key in db:
-        return ujson.loads(db[key])
+        return json.loads(db[key])
     else:
         return None
-
-# Inicializar la base de datos
-db = init_db()
-
-def sub_cb(topic, msg, retained):
-    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
-
-async def wifi_han(state):
-    print('Wifi is ', 'up' if state else 'down')
-    await asyncio.sleep(1)
-
-# If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
-async def conn_han(client):
-    await client.subscribe('setpoint', 1)
-    await client.subscribe('periodo', 1)
-    await client.subscribe('destello', 1)
-    await client.subscribe('modo', 1)
-    await client.subscribe('rele', 1)
+'''
 
 async def main(client):
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
     while True:
+        f = open("config.txt", "w+b")
+        # Now open a database itself
+        db = btree.open(f)
         try:
             d.measure()
-            datos = {
+            try:
+                datos = {
                 'temperatura': d.temperature(),
                 'humedad': d.humidity(),
                 'setpoint': setpoint,
                 'periodo': periodo,
                 'modo': modo
-            }
-            try:
-                await client.publish('alan/'+CLIENT_ID, ujson.dumps(datos), qos=1)
+                }
+                await client.publish('alan/'+CLIENT_ID, json.dumps(datos), qos=1)
             except OSError as e:
                 print("Error al publicar datos:", e)
         except OSError as e:
@@ -94,11 +99,10 @@ async def main(client):
                 'modo': modo,
                 'rele': rele
             }
-            # Almacenar el diccionario completo en la base de datos
-            store_data(db, 'parametros', parametros)
+            db[b'datos'] = b'parametros'
         except OSError as e:
             print("Error al guardar los parametros")
-        try:
+        '''try:
             if modo == "automatico":
                 if datos['temperatura'] > setpoint:
                     rele = "encendido"
@@ -108,9 +112,13 @@ async def main(client):
             if modo == "manual":
                 # y aca ya no sé xd
                 pass
-        except OSError as e:
-            print("El relé no funciona")
+        except:
+            print("El relé no funciona")'''
+        db.close()
+        f.close()
         await asyncio.sleep(periodo)  # Broker is slow
+
+
 
 # Define configuration
 config['subs_cb'] = sub_cb
