@@ -61,7 +61,7 @@ async def main(client):
             except OSError as e:
                 print("sin sensor humedad")  
         except OSError as e:
-            print("sin sensor")
+            print("sin sensor") 
         try:
             await client.publish('alan/'+CLIENT_ID+'/periodo', '{}'.format(periodo), qos = 1)
         except:

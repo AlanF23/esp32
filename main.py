@@ -24,13 +24,30 @@ import json
 
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
-periodo = 20
 rele = "apagado"
-setpoint = 26
-modo = "manual"
-
+datos = {
+    'temperatura': 0.0,
+    'humedad': 0.0,
+    'setpoint': 25.5,
+    'periodo': 20,
+    'modo': "manual"
+    }
 def sub_cb(topic, msg, retained):
-    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
+    topico = topic.decode()
+    mensaje = msg.decode()
+    print('Topic = {} -> Valor = {}'.format(topico, mensaje))
+    if topico == 'alan/setpoint':
+        datos['setpoint']=float(mensaje)
+
+    if topico == 'alan/periodo':
+        datos['periodo']=int(mensaje)
+
+    if topico == 'alan/modo':
+        datos['modo']=mensaje
+
+
+
+    
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -44,64 +61,22 @@ async def conn_han(client):
     await client.subscribe('alan/modo', 1)
     await client.subscribe('alan/rele', 1)
     await client.subscribe('alan/'+CLIENT_ID, 1)
-'''
-# Función para inicializar la base de datos
-def init_db():
-    try:
-        with open('config.db', 'r+b') as f:
-            return btree.open(f)
-    except OSError:
-        with open('config.db', 'w+b') as f:
-            return btree.open(f)
-
-# Función para almacenar datos en la base de datos
-def store_data(db, key, value):
-    try:
-        db[key] = json.dumps(value)
-    except Exception as e:
-        print("Error al almacenar datos:", e)
-
-# Función para recuperar datos de la base de datos
-def retrieve_data(db, key):
-    if key in db:
-        return json.loads(db[key])
-    else:
-        return None
-'''
 
 async def main(client):
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
     while True:
-        f = open("config.txt", "w+b")
-        # Now open a database itself
-        db = btree.open(f)
         try:
             d.measure()
             try:
-                datos = {
-                'temperatura': d.temperature(),
-                'humedad': d.humidity(),
-                'setpoint': setpoint,
-                'periodo': periodo,
-                'modo': modo
-                }
+                datos['humedad']=d.humidity()
+                datos['temperatura']=d.temperature()
                 await client.publish('alan/'+CLIENT_ID, json.dumps(datos), qos=1)
             except OSError as e:
                 print("Error al publicar datos:", e)
         except OSError as e:
             print("Error al medir los datos")
-        try:
-            parametros = {
-                'setpoint': setpoint,
-                'periodo': periodo,
-                'modo': modo,
-                'rele': rele
-            }
-            db[b'datos'] = b'parametros'
-        except OSError as e:
-            print("Error al guardar los parametros")
         '''try:
             if modo == "automatico":
                 if datos['temperatura'] > setpoint:
@@ -114,9 +89,7 @@ async def main(client):
                 pass
         except:
             print("El relé no funciona")'''
-        db.close()
-        f.close()
-        await asyncio.sleep(periodo)  # Broker is slow
+        await asyncio.sleep(datos['periodo'])  # Broker is slow
 
 
 
