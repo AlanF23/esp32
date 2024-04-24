@@ -25,6 +25,7 @@ import json
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 rele = "apagado"
+flagRele = 0
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
@@ -35,15 +36,22 @@ datos = {
 def sub_cb(topic, msg, retained):
     topico = topic.decode()
     mensaje = msg.decode()
+
     print('Topic = {} -> Valor = {}'.format(topico, mensaje))
+
     if topico == 'alan/setpoint':
         datos['setpoint']=float(mensaje)
 
-    if topico == 'alan/periodo':
+    elif topico == 'alan/periodo':
         datos['periodo']=int(mensaje)
 
-    if topico == 'alan/modo':
-        datos['modo']=mensaje
+    elif topico == 'alan/modo':
+        datos['modo']=mensaje.lower()
+        if datos['modo'] == 'manual':
+            flagRele = 1
+    
+    elif topico == 'alan/rele':
+        rele = mensaje
 
 
 
@@ -77,18 +85,6 @@ async def main(client):
                 print("Error al publicar datos:", e)
         except OSError as e:
             print("Error al medir los datos")
-        '''try:
-            if modo == "automatico":
-                if datos['temperatura'] > setpoint:
-                    rele = "encendido"
-                    #codigo que active el pin del relé
-                else:
-                    rele = "apagado"
-            if modo == "manual":
-                # y aca ya no sé xd
-                pass
-        except:
-            print("El relé no funciona")'''
         await asyncio.sleep(datos['periodo'])  # Broker is slow
 
 
