@@ -26,6 +26,7 @@ d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 rele = "apagado"
 flagRele = 0
+destello = 0
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
@@ -51,7 +52,11 @@ def sub_cb(topic, msg, retained):
             flagRele = 1
     
     elif topico == 'alan/rele':
-        rele = mensaje
+        rele = mensaje.lower()
+    
+    elif topico == 'alan/destello':
+        destello = int(mensaje)
+
 
 
 
@@ -85,6 +90,18 @@ async def main(client):
                 print("Error al publicar datos:", e)
         except OSError as e:
             print("Error al medir los datos")
+        try:
+            if flagRele == 1:
+                if rele == 'encendido':
+                    #prender
+                elif rele == 'apagado':
+                    #apagar
+            elif datos['temperatura']>datos['setpoint']:
+                #prender
+            elif datos['temperatura']>=datos['setpoint']:
+                #apagar
+        except OSError as e:
+            print("Rele NO Funciona")
         await asyncio.sleep(datos['periodo'])  # Broker is slow
 
 
