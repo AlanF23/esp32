@@ -18,6 +18,7 @@ from mqtt_local import config
 import uasyncio as asyncio
 import dht, machine
 import ubinascii
+from time import sleep
 
 import btree
 import json
@@ -25,18 +26,22 @@ import json
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 rele = "apagado"
-flagRele = 0
+flagRele = 1
 destello = 0
 led = machine.Pin(2, machine.Pin.OUT)
 accionrele = machine.Pin(13, machine.Pin.OUT)
+led.value(0)
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
     'setpoint': 25.5,
-    'periodo': 20,
+    'periodo': 10,
     'modo': "manual"
     }
 def sub_cb(topic, msg, retained):
+    global destello
+    global rele
+    global flagRele
     topico = topic.decode()
     mensaje = msg.decode()
 
@@ -52,6 +57,8 @@ def sub_cb(topic, msg, retained):
         datos['modo']=mensaje.lower()
         if datos['modo'] == 'manual':
             flagRele = 1
+        if datos['modo'] == 'automatico':
+            flagRele = 0
     
     elif topico == 'alan/rele':
         rele = mensaje.lower()
@@ -78,6 +85,9 @@ async def conn_han(client):
     await client.subscribe('alan/'+CLIENT_ID, 1)
 
 async def main(client):
+    global destello
+    global rele
+    global flagRele
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
@@ -95,17 +105,29 @@ async def main(client):
         try:
             if flagRele == 1:
                 if rele == 'encendido':
-                    #prender
+                    accionrele.value(0)
+                    print("Rele encendido manualmente")
                 elif rele == 'apagado':
-                    #apagar
-            elif datos['temperatura']>datos['setpoint']:
-                #prender
-            elif datos['temperatura']>=datos['setpoint']:
-                #apagar
+                    accionrele.value(1)
+                    print("Rele apagado manualmente")
+            else:
+                if datos['temperatura']>datos['setpoint']:
+                    accionrele.value(0)
+                    print("Rele encendido automatico")
+                if datos['temperatura']<=datos['setpoint']:
+                    accionrele.value(1)
+                    print("Rele apagado automatico")
         except OSError as e:
             print("Rele NO Funciona")
         try:
-            #prender led
+            if destello == 1:
+                print("Destello")
+                led.value(not led.value())
+                sleep(2)
+                led.value(not led.value())
+                destello = 0
+        except OSError as e:
+            print("Destello NO Funciona")
         await asyncio.sleep(datos['periodo'])  # Broker is slow
 
 
