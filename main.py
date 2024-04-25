@@ -27,6 +27,8 @@ CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 rele = "apagado"
 flagRele = 0
 destello = 0
+led = machine.Pin(2, machine.Pin.OUT)
+accionrele = machine.Pin(13, machine.Pin.OUT)
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
@@ -102,6 +104,8 @@ async def main(client):
                 #apagar
         except OSError as e:
             print("Rele NO Funciona")
+        try:
+            #prender led
         await asyncio.sleep(datos['periodo'])  # Broker is slow
 
 
