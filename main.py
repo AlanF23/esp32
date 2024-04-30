@@ -16,11 +16,11 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import dht, machine, json
+import dht, machine, json, ubinascii
 from collections import OrderedDict
 
 d = dht.DHT22(machine.Pin(25))
-
+CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
 
@@ -47,14 +47,14 @@ async def main(client):
                         ('temperatura',temperatura),
                         ('humedad',humedad)
                     ]))
-                    await client.publish('iot/2024/'config['client_id'], datos, qos = 1)
+                    await client.publish('iot/2024/'+CLIENT_ID, datos, qos = 1)
                 except OSError as e:
                     print("sin sensor temperatura")
             except OSError as e:
                 print("sin sensor humedad")
         except OSError as e:
             print("sin sensor")
-        await asyncio.sleep(30)  # Broker is slow
+        await asyncio.sleep(5)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
