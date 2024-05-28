@@ -5,7 +5,6 @@ from settings import SSID, PASS, USR_MQTT, PASS_MQTT, SERVIDOR, PORT
 
 #  config['server'] = '192.168.0.10'  # Change to suit
 config['server'] = SERVIDOR
-
 # Not needed if you're only using ESP8266
 config['ssid'] = SSID
 config['port'] = PORT
