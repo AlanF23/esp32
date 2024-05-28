@@ -19,8 +19,6 @@ import uasyncio as asyncio
 import dht, machine
 import ubinascii
 from time import sleep
-
-import btree
 import json
 
 d = dht.DHT22(machine.Pin(25))
@@ -65,11 +63,6 @@ def sub_cb(topic, msg, retained):
     
     elif topico == 'alan/destello':
         destello = int(mensaje)
-
-
-
-
-    
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -136,7 +129,7 @@ async def main(client):
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = True
+config['ssl'] = False
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
