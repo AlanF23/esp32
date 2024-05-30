@@ -47,29 +47,25 @@ def sub_cb(topic, msg, retained):
 
     print('Topic = {} -> Valor = {}'.format(topico, mensaje))
 
-    if topico == 'alan/setpoint':
+    if topico == 'setpoint':
         datos['setpoint']=float(mensaje)
 
-    elif topico == 'alan/periodo':
+    elif topico == 'periodo':
         datos['periodo']=int(mensaje)
 
-    elif topico == 'alan/modo':
+    elif topico == 'modo':
         datos['modo']=mensaje.lower()
         if datos['modo'] == 'manual':
             flagRele = 1
-        if datos['modo'] == 'automatico':
+        if datos['modo'] == 'auto':
             flagRele = 0
     
-    elif topico == 'alan/rele':
+    elif topico == 'rele':
         rele = mensaje.lower()
     
-    elif topico == 'alan/destello':
+    elif topico == 'destello':
         destello = int(mensaje)
 
-
-
-
-    
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -77,12 +73,12 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('alan/setpoint', 1)
-    await client.subscribe('alan/periodo', 1)
-    await client.subscribe('alan/destello', 1)
-    await client.subscribe('alan/modo', 1)
-    await client.subscribe('alan/rele', 1)
-    await client.subscribe('alan/'+CLIENT_ID, 1)
+    await client.subscribe('setpoint', 1)
+    await client.subscribe('periodo', 1)
+    await client.subscribe('destello', 1)
+    await client.subscribe('modo', 1)
+    await client.subscribe('rele', 1)
+    await client.subscribe('iot/2024'+CLIENT_ID, 1)
 
 async def main(client):
     global destello
