@@ -119,7 +119,11 @@ async def main(client):
             if destello == 1:
                 print("Destello")
                 led.value(not led.value())
-                sleep(2)
+                sleep(1)
+                led.value(not led.value())
+                sleep(1)
+                led.value(not led.value())
+                sleep(1)
                 led.value(not led.value())
                 destello = 0
         except OSError as e:
