@@ -35,7 +35,7 @@ datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
     'setpoint': 25.5,
-    'periodo': 10,
+    'periodo': 3,
     'modo': "manual"
     }
 def sub_cb(topic, msg, retained):
