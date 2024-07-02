@@ -25,46 +25,22 @@ import json
 
 d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
-rele = "apagado"
-flagRele = 1
-destello = 0
 led = machine.Pin(2, machine.Pin.OUT)
-accionrele = machine.Pin(13, machine.Pin.OUT)
 led.value(0)
+estado_led = False
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
-    'setpoint': 25.5,
-    'periodo': 3,
-    'modo': "manual"
     }
 def sub_cb(topic, msg, retained):
-    global destello
-    global rele
-    global flagRele
+    #global estado_led
     topico = topic.decode()
     mensaje = msg.decode()
 
     print('Topic = {} -> Valor = {}'.format(topico, mensaje))
 
-    if topico == 'setpoint':
-        datos['setpoint']=float(mensaje)
-
-    elif topico == 'periodo':
-        datos['periodo']=int(mensaje)
-
-    elif topico == 'modo':
-        datos['modo']=mensaje.lower()
-        if datos['modo'] == 'manual':
-            flagRele = 1
-        if datos['modo'] == 'auto':
-            flagRele = 0
-    
-    elif topico == 'rele':
-        rele = mensaje.lower()
-    
-    elif topico == 'destello':
-        destello = int(mensaje)
+    if topico == '/switch_led':
+        estado_led = mensaje
 
 
 async def wifi_han(state):
@@ -73,17 +49,11 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('setpoint', 1)
-    await client.subscribe('periodo', 1)
-    await client.subscribe('destello', 1)
-    await client.subscribe('modo', 1)
-    await client.subscribe('rele', 1)
-    await client.subscribe('iot/2024'+CLIENT_ID, 1)
+    await client.subscribe('/switch_led', 1)
+    await client.subscribe('/sensores_remotos', 1)
 
 async def main(client):
-    global destello
-    global rele
-    global flagRele
+    #global estado_led
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
@@ -93,42 +63,21 @@ async def main(client):
             try:
                 datos['humedad']=d.humidity()
                 datos['temperatura']=d.temperature()
-                await client.publish('alan/'+CLIENT_ID, json.dumps(datos), qos=1)
+                await client.publish('/sensores_remotos/', json.dumps(datos), qos=1)
             except OSError as e:
                 print("Error al publicar datos:", e)
         except OSError as e:
             print("Error al medir los datos")
         try:
-            if flagRele == 1:
-                if rele == 'encendido':
-                    accionrele.value(0)
-                    print("Rele encendido manualmente")
-                elif rele == 'apagado':
-                    accionrele.value(1)
-                    print("Rele apagado manualmente")
+            if estado_led == True:
+                led.value(1)
+                await client.publish('/estado', str(led.value()), qos=1)
             else:
-                if datos['temperatura']>datos['setpoint']:
-                    accionrele.value(0)
-                    print("Rele encendido automatico")
-                if datos['temperatura']<=datos['setpoint']:
-                    accionrele.value(1)
-                    print("Rele apagado automatico")
+                led.value(0)
+                await client.publish('/estado', str(led.value()), qos=1)
         except OSError as e:
-            print("Rele NO Funciona")
-        try:
-            if destello == 1:
-                print("Destello")
-                led.value(not led.value())
-                sleep(1)
-                led.value(not led.value())
-                sleep(1)
-                led.value(not led.value())
-                sleep(1)
-                led.value(not led.value())
-                destello = 0
-        except OSError as e:
-            print("Destello NO Funciona")
-        await asyncio.sleep(datos['periodo'])  # Broker is slow
+            print("No funciona el cambio del led")
+        await asyncio.sleep(5)  # Broker is slow
 
 
 
