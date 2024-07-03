@@ -39,7 +39,6 @@ def sub_cb(topic, msg, retained):
     mensaje = msg.decode()
 
     print('Topic = {} -> Valor = {}'.format(topico, mensaje))
-    #print("Estado del led: {}".format(mensaje))
     if topico == '/switch_led/':
         estado_led = mensaje
         print("Estado del led en sub_cb: {}".format(mensaje))
@@ -54,11 +53,11 @@ async def conn_han(client):
     await client.subscribe('/switch_led/', 1)
     await client.subscribe('/sensores_remotos/#', 1)
 
-'''async def manejo_led(client):
+async def manejo_led():
     global estado_led
+    await asyncio.sleep(4)
     while True:
         try:
-            print("Estado del led en funcion: {}".format(estado_led))
             if estado_led == "true":
                 led.value(1)
                 await client.publish('/estado', str(led.value()), qos=1)
@@ -67,7 +66,7 @@ async def conn_han(client):
                 await client.publish('/estado', str(led.value()), qos=1)
         except OSError as e:
             print("No funciona el cambio del led")
-        await asyncio.sleep(1)'''
+        await asyncio.sleep(0.5)
 
 async def main(client):
     global estado_led
@@ -85,18 +84,10 @@ async def main(client):
                 print("Error al publicar datos:", e)
         except OSError as e:
             print("Error al medir los datos")
-        try:
-            print("Estado del led en funcion: {}".format(estado_led))
-            if estado_led == "true":
-                led.value(1)
-                await client.publish('/estado', str(led.value()), qos=1)
-            if estado_led == "false":
-                led.value(0)
-                await client.publish('/estado', str(led.value()), qos=1)
-        except OSError as e:
-            print("No funciona el cambio del led")
         await asyncio.sleep(5)  # Broker is slow
 
+async def task(client):
+    await asyncio.gather(main(client), manejo_led())
 
 
 # Define configuration
@@ -109,7 +100,7 @@ config['ssl'] = True
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
 try:
-    asyncio.run(main(client))
+    asyncio.run(task(client))
 finally:
     client.close()
     asyncio.new_event_loop()
