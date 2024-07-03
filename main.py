@@ -27,20 +27,22 @@ d = dht.DHT22(machine.Pin(25))
 CLIENT_ID = ubinascii.hexlify(machine.unique_id()).decode('utf-8')
 led = machine.Pin(2, machine.Pin.OUT)
 led.value(0)
-estado_led = False
+estado_led = ""
 datos = {
     'temperatura': 0.0,
     'humedad': 0.0,
     }
+
 def sub_cb(topic, msg, retained):
-    #global estado_led
+    global estado_led
     topico = topic.decode()
     mensaje = msg.decode()
 
     print('Topic = {} -> Valor = {}'.format(topico, mensaje))
-
-    if topico == '/switch_led':
+    #print("Estado del led: {}".format(mensaje))
+    if topico == '/switch_led/':
         estado_led = mensaje
+        print("Estado del led en sub_cb: {}".format(mensaje))
 
 
 async def wifi_han(state):
@@ -52,8 +54,23 @@ async def conn_han(client):
     await client.subscribe('/switch_led/', 1)
     await client.subscribe('/sensores_remotos/#', 1)
 
+'''async def manejo_led(client):
+    global estado_led
+    while True:
+        try:
+            print("Estado del led en funcion: {}".format(estado_led))
+            if estado_led == "true":
+                led.value(1)
+                await client.publish('/estado', str(led.value()), qos=1)
+            if estado_led == "false":
+                led.value(0)
+                await client.publish('/estado', str(led.value()), qos=1)
+        except OSError as e:
+            print("No funciona el cambio del led")
+        await asyncio.sleep(1)'''
+
 async def main(client):
-    #global estado_led
+    global estado_led
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
@@ -69,10 +86,11 @@ async def main(client):
         except OSError as e:
             print("Error al medir los datos")
         try:
-            if estado_led == True:
+            print("Estado del led en funcion: {}".format(estado_led))
+            if estado_led == "true":
                 led.value(1)
                 await client.publish('/estado', str(led.value()), qos=1)
-            else:
+            if estado_led == "false":
                 led.value(0)
                 await client.publish('/estado', str(led.value()), qos=1)
         except OSError as e:
