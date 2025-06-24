@@ -18,10 +18,12 @@ from mqtt_local import config
 import uasyncio as asyncio
 import machine,  onewire, ds18x20
 
-# Configuración del pin de datos del DS18B20 (cambiar si es necesario)
-ow = onewire.OneWire(machine.Pin(25))
+# Configuración del pin de datos del DS18B20
+ow = onewire.OneWire(machine.Pin(5))
 ds = ds18x20.DS18X20(ow)
 roms = ds.scan()
+print("Sensores encontrados:", roms)
+
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -32,18 +34,20 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('alan/temperatura', 1)
+    await client.subscribe('prueba/temperatura', 1)
 
 async def main(client):
     await client.connect()
-    n = 0
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
+            print("Iniciando lectura de temperatura...")
             ds.convert_temp()
             await asyncio.sleep(1)  # Wait for conversion
             for rom in roms:
+                print("Leyendo temperatura del sensor:", rom)
                 temp = ds.read_temp(rom)
+                print("Valor leído de temp:", temp)
                 if temp is not None:
                     await client.publish('alan/temperatura', '{}'.format(temp), qos=1)
                 else:
@@ -56,7 +60,7 @@ async def main(client):
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = True
+config['ssl'] = False
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
