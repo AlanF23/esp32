@@ -16,9 +16,12 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import dht, machine
+import machine,  onewire, ds18x20
 
-d = dht.DHT22(machine.Pin(25))
+# Configuración del pin de datos del DS18B20 (cambiar si es necesario)
+ow = onewire.OneWire(machine.Pin(25))
+ds = ds18x20.DS18X20(ow)
+roms = ds.scan()
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -30,7 +33,6 @@ async def wifi_han(state):
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('alan/temperatura', 1)
-    await client.subscribe('alan/humedad', 1)
 
 async def main(client):
     await client.connect()
@@ -38,20 +40,17 @@ async def main(client):
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
-            d.measure()
-            try:
-                temperatura=d.temperature()
-                await client.publish('alan/temperatura', '{}'.format(temperatura), qos = 1)
-            except OSError as e:
-                print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('alan/humedad', '{}'.format(humedad), qos = 1)
-            except OSError as e:
-                print("sin sensor humedad")
-        except OSError as e:
-            print("sin sensor")
-        await asyncio.sleep(20)  # Broker is slow
+            ds.convert_temp()
+            await asyncio.sleep(1)  # Wait for conversion
+            for rom in roms:
+                temp = ds.read_temp(rom)
+                if temp is not None:
+                    await client.publish('alan/temperatura', '{}'.format(temp), qos=1)
+                else:
+                    print("Error al leer temperatura")
+        except Exception as e:
+            print("Error al leer el sensor:", e)
+        await asyncio.sleep(5)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
