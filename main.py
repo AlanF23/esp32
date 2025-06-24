@@ -41,15 +41,12 @@ async def main(client):
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
-            print("Iniciando lectura de temperatura...")
             ds.convert_temp()
             await asyncio.sleep(1)  # Wait for conversion
             for rom in roms:
-                print("Leyendo temperatura del sensor:", rom)
                 temp = ds.read_temp(rom)
-                print("Valor leído de temp:", temp)
                 if temp is not None:
-                    await client.publish('alan/temperatura', '{}'.format(temp), qos=1)
+                    await client.publish('prueba/temperatura', '{}'.format(temp), qos=1)
                 else:
                     print("Error al leer temperatura")
         except Exception as e:
