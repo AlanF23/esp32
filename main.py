@@ -49,7 +49,7 @@ async def main(client):
 
         try:
             voltaje = turb_raw * (3.3 / 4095)
-            voltaje_real = voltaje * ((15 + 22) / 22)
+            voltaje_real = voltaje * 1.5
             ntu = -(1120.4 * voltaje_real**2) + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))
             print("Voltaje Medido: {} - Voltaje Real: {} - NTU:{}".format(voltaje, voltaje_real, ntu))
