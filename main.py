@@ -22,7 +22,11 @@ import machine,  onewire, ds18x20
 ow = onewire.OneWire(machine.Pin(5))
 ds = ds18x20.DS18X20(ow)
 roms = ds.scan()
-print("Sensores encontrados:", roms)
+
+# Sensor de turbidez en GPIO34
+adc = machine.ADC(machine.Pin(34))
+adc.atten(machine.ADC.ATTN_11DB)  # Rango 0–3.6V
+adc.width(machine.ADC.WIDTH_12BIT)  # Resolución 0–4095
 
 
 def sub_cb(topic, msg, retained):
@@ -49,8 +53,16 @@ async def main(client):
                     await client.publish('prueba/temperatura', '{}'.format(temp), qos=1)
                 else:
                     print("Error al leer temperatura")
+
+            # Leer turbidez
+            turb_raw = adc.read()
+            voltaje = turb_raw * (3.3 / 4095)  # Convertir a voltios
+            ntu = -1120.4 * voltaje**2 + 5742.3 * voltaje - 4352.9
+            ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
+            await client.publish('prueba/turbidez', str(ntu), qos=1)
+
         except Exception as e:
-            print("Error al leer el sensor:", e)
+            print("Error al leer los sensores:", e)
         await asyncio.sleep(5)  # Broker is slow
 
 # Define configuration
