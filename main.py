@@ -18,8 +18,8 @@ from mqtt_local import config
 import uasyncio as asyncio
 import machine
 
-# Sensor de turbidez en GPIO34
-adc = machine.ADC(machine.Pin(34))
+# Sensor de turbidez en GPIO4
+adc = machine.ADC(machine.Pin(4))
 adc.atten(machine.ADC.ATTN_11DB)  # Rango 0–3.6V
 adc.width(machine.ADC.WIDTH_12BIT)  # Resolución 0–4095
 
