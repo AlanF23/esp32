@@ -19,7 +19,7 @@ import uasyncio as asyncio
 import machine
 
 # Sensor de turbidez en GPIO4
-adc = machine.ADC(machine.Pin(4))
+adc = machine.ADC(machine.Pin(34))
 adc.atten(machine.ADC.ATTN_11DB)  # Rango 0–3.6V
 adc.width(machine.ADC.WIDTH_12BIT)  # Resolución 0–4095
 
@@ -39,18 +39,28 @@ async def main(client):
     await client.connect()
     await asyncio.sleep(2)  # Give broker time
     while True:
-        try:
-            await asyncio.sleep(0.05)
-            # Leer turbidez
-            turb_raw = adc.read()
-            voltaje = turb_raw * (3.3 / 4095)  # Convertir a voltios
-            ntu = -1120.4 * voltaje**2 + 5742.3 * voltaje - 4352.9
-            ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
-            await client.publish('prueba/turbidez', str(ntu), qos=1)
+        await asyncio.sleep(0.05)
 
+        try:
+            turb_raw = adc.read()
+            print("RAW:", turb_raw)
         except Exception as e:
-            print("Error al leer el sensor:", e)
-        await asyncio.sleep(5)  # Broker is slow
+            print("Error en lectura ADC:", e)
+
+        try:
+            voltaje = turb_raw * (3.3 / 4095)
+            ntu = -1120.4 * voltaje**2 + 5742.3 * voltaje - 4352.9
+            ntu = max(0, round(ntu, 2))
+            print("NTU:", ntu)
+        except Exception as e:
+            print("Error en cálculo:", e)
+
+        try:
+            await client.publish('prueba/turbidez', str(ntu), qos=1)
+        except Exception as e:
+            print("Error al publicar MQTT:", e)
+
+        await asyncio.sleep(5)
 
 # Define configuration
 config['subs_cb'] = sub_cb
