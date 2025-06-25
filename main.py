@@ -39,6 +39,7 @@ async def wifi_han(state):
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('prueba/temperatura', 1)
+    await client.subscribe('prueba/turbidez', 1)
 
 async def main(client):
     await client.connect()
