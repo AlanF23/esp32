@@ -49,9 +49,10 @@ async def main(client):
 
         try:
             voltaje = turb_raw * (3.3 / 4095)
-            ntu = -1120.4 * voltaje**2 + 5742.3 * voltaje - 4352.9
+            voltaje_real = voltaje * ((15 + 22) / 22)
+            ntu = -(1120.4 * voltaje_real**2) + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))
-            print("NTU:", ntu)
+            print("Voltaje Medido: {} - Voltaje Real: {} - NTU:{}".format(voltaje, voltaje_real, ntu))
         except Exception as e:
             print("Error en cálculo:", e)
 
