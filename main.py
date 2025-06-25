@@ -16,12 +16,7 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import machine,  onewire, ds18x20
-
-# Configuración del pin de datos del DS18B20
-ow = onewire.OneWire(machine.Pin(5))
-ds = ds18x20.DS18X20(ow)
-roms = ds.scan()
+import machine
 
 # Sensor de turbidez en GPIO34
 adc = machine.ADC(machine.Pin(34))
@@ -38,22 +33,14 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('prueba/temperatura', 1)
+    await client.subscribe('prueba/turbidez', 1)
 
 async def main(client):
     await client.connect()
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
-            ds.convert_temp()
-            await asyncio.sleep(1)  # Wait for conversion
-            for rom in roms:
-                temp = ds.read_temp(rom)
-                if temp is not None:
-                    await client.publish('prueba/temperatura', '{}'.format(temp), qos=1)
-                else:
-                    print("Error al leer temperatura")
-
+            await asyncio.sleep(0.05)
             # Leer turbidez
             turb_raw = adc.read()
             voltaje = turb_raw * (3.3 / 4095)  # Convertir a voltios
@@ -62,7 +49,7 @@ async def main(client):
             await client.publish('prueba/turbidez', str(ntu), qos=1)
 
         except Exception as e:
-            print("Error al leer los sensores:", e)
+            print("Error al leer el sensor:", e)
         await asyncio.sleep(5)  # Broker is slow
 
 # Define configuration
