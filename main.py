@@ -61,6 +61,7 @@ async def main(client):
             voltaje_real = voltaje * 1.5  # Ajuste del voltaje
             ntu = -1120.4 * voltaje_real**2 + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
+            print("Voltaje: ", voltaje)
             await client.publish('prueba/turbidez', str(ntu), qos=1)
 
         except Exception as e:
