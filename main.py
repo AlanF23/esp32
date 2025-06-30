@@ -58,7 +58,8 @@ async def main(client):
             # Leer turbidez
             turb_raw = adc.read()
             voltaje = turb_raw * (3.3 / 4095)  # Convertir a voltios
-            ntu = -1120.4 * voltaje**2 + 5742.3 * voltaje - 4352.9
+            voltaje_real = voltaje * 1.5  # Ajuste del voltaje
+            ntu = -1120.4 * voltaje_real**2 + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
             await client.publish('prueba/turbidez', str(ntu), qos=1)
 
