@@ -16,7 +16,8 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import machine,  onewire, ds18x20
+import machine,  onewire, ds18x20, json
+from collections import OrderedDict
 
 # Configuración del pin de datos del DS18B20
 ow = onewire.OneWire(machine.Pin(5))
@@ -40,6 +41,7 @@ async def wifi_han(state):
 async def conn_han(client):
     await client.subscribe('prueba/temperatura', 1)
     await client.subscribe('prueba/turbidez', 1)
+    await client.subscribe('prueba/datos', 1)
 
 async def main(client):
     await client.connect()
@@ -63,7 +65,11 @@ async def main(client):
             ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
             print("Voltaje: ", voltaje)
             await client.publish('prueba/turbidez', str(ntu), qos=1)
-
+            datos=json.dumps(OrderedDict([
+                ('temperatura',temp),
+                ('turbidez',ntu)
+            ]))
+            await client.publish('prueba/datos', datos, qos = 1)
         except Exception as e:
             print("Error al leer los sensores:", e)
         await asyncio.sleep(5)  # Broker is slow
