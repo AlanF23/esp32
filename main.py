@@ -40,9 +40,6 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    #await client.subscribe('prueba/temperatura', 1)
-    #await client.subscribe('prueba/turbidez', 1)
-    #await client.subscribe('prueba/datos', 1)
     await client.subscribe(config['client_id'], 1)
 
 async def main(client):
@@ -54,10 +51,6 @@ async def main(client):
             await asyncio.sleep(1)  # Wait for conversion
             for rom in roms:
                 temp = ds.read_temp(rom)
-                '''if temp is not None:
-                    await client.publish('prueba/temperatura', '{}'.format(temp), qos=1)
-                else:
-                    print("Error al leer temperatura")'''
 
             # Leer turbidez
             turb_raw = adc.read()
@@ -65,7 +58,7 @@ async def main(client):
             voltaje_real = voltaje * 1.5  # Ajuste del voltaje
             ntu = -1120.4 * voltaje_real**2 + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
-            #print("Voltaje: ", voltaje)
+            print("Voltaje: ", voltaje)
             #await client.publish('prueba/turbidez', str(ntu), qos=1)
             datos=json.dumps(OrderedDict([
                 ('temperatura',temp),
