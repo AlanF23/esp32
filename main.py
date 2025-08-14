@@ -180,8 +180,7 @@ async def main(client):
             print("Filtro NO Funciona")
         try:
             if alimentar == 1:
-                alimentador.value(1)
-                print("Alimentando peces")  #Aca tengo que agregar lo del alimentador
+                #Aca debe ir el código del alimentador
                 alimentar = 0
         except OSError as e:
             print("Alimentador NO Funciona")
