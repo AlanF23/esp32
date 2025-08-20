@@ -18,6 +18,7 @@ from mqtt_local import config
 import uasyncio as asyncio
 import machine,  onewire, ds18x20, json, ubinascii
 from collections import OrderedDict
+import time
 
 # Configuración del pin de datos del DS18B20
 ow = onewire.OneWire(machine.Pin(5))
@@ -109,6 +110,61 @@ async def conn_han(client):
     await client.subscribe('filtro', 1)
     await client.subscribe('alimentar', 1)
 
+# Pines del motor paso a paso (ULN2003 o similar)
+IN1 = machine.Pin(14, machine.Pin.OUT)  # Cambiar a los pines que uses
+IN2 = machine.Pin(27, machine.Pin.OUT)
+IN3 = machine.Pin(26, machine.Pin.OUT)
+IN4 = machine.Pin(25, machine.Pin.OUT)
+
+# Secuencia del motor (paso completo)
+pasos = [
+    [1, 1, 0, 0],
+    [0, 1, 1, 0],
+    [0, 0, 1, 1],
+    [1, 0, 0, 1]
+]
+
+def mover_motor(pasos_a_mover=50, delay_ms=2):
+    """Gira el motor cierta cantidad de pasos."""
+    for _ in range(pasos_a_mover):
+        for paso in pasos:
+            IN1.value(paso[0])
+            IN2.value(paso[1])
+            IN3.value(paso[2])
+            IN4.value(paso[3])
+            time.sleep_ms(delay_ms)
+    # Apagar bobinas para evitar consumo innecesario
+    IN1.value(0)
+    IN2.value(0)
+    IN3.value(0)
+    IN4.value(0)
+
+# Variables para control de alimentación automática
+ultima_fecha_alimentacion = None
+
+def alimentar_si_corresponde():
+    """Alimenta automáticamente a las 20:00 si está en modo automático."""
+    global ultima_fecha_alimentacion
+    if datos['modo'] == 'auto':
+        ahora = time.localtime()  # (año, mes, día, hora, minuto, segundo, día_sem, día_año)
+        hora, minuto = ahora[3], ahora[4]
+        fecha_hoy = (ahora[0], ahora[1], ahora[2])  # Año, mes, día
+        if hora == 20 and minuto == 0:
+            if ultima_fecha_alimentacion != fecha_hoy:
+                print("Alimentación automática")
+                mover_motor()
+                ultima_fecha_alimentacion = fecha_hoy
+
+def alimentar_manual():
+    """Alimenta si el comando MQTT lo solicita."""
+    global alimentar
+    if datos['modo'] == 'manual' and alimentar == 1:
+        print("Alimentación manual")
+        mover_motor()
+        alimentar = 0
+
+
+
 async def main(client):
     await client.connect()
     await asyncio.sleep(2)  # Give broker time
@@ -179,9 +235,8 @@ async def main(client):
         except OSError as e:
             print("Filtro NO Funciona")
         try:
-            if alimentar == 1:
-                #Aca debe ir el código del alimentador
-                alimentar = 0
+            alimentar_manual()
+            alimentar_si_corresponde()
         except OSError as e:
             print("Alimentador NO Funciona")
         await asyncio.sleep(datos['periodo'])  # Broker is slow
