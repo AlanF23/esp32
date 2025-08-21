@@ -44,8 +44,11 @@ flagfiltro = 1
 accionfiltro = machine.Pin(11, machine.Pin.OUT)
 
 alimentar = 0
-alimentador = machine.Pin(2, machine.Pin.OUT)
-alimentador.value(0)
+# Pines del motor paso a paso (ULN2003 o similar)
+IN1 = machine.Pin(14, machine.Pin.OUT)  # Cambiar a los pines que uses
+IN2 = machine.Pin(27, machine.Pin.OUT)
+IN3 = machine.Pin(26, machine.Pin.OUT)
+IN4 = machine.Pin(25, machine.Pin.OUT)
 
 datos = {
     'temperatura': 0.0,
@@ -110,11 +113,6 @@ async def conn_han(client):
     await client.subscribe('filtro', 1)
     await client.subscribe('alimentar', 1)
 
-# Pines del motor paso a paso (ULN2003 o similar)
-IN1 = machine.Pin(14, machine.Pin.OUT)  # Cambiar a los pines que uses
-IN2 = machine.Pin(27, machine.Pin.OUT)
-IN3 = machine.Pin(26, machine.Pin.OUT)
-IN4 = machine.Pin(25, machine.Pin.OUT)
 
 # Secuencia del motor (paso completo)
 pasos = [
