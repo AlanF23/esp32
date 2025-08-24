@@ -33,27 +33,27 @@ adc.width(machine.ADC.WIDTH_12BIT)  # Resolución 0–4095
 
 calentador = "apagado"
 flagcalentador = 1
-accioncalentador = machine.Pin(13, machine.Pin.OUT)
+accioncalentador = machine.Pin(21, machine.Pin.OUT)
 
 ventilador = "apagado"
 flagventilador = 1
-accionventilador = machine.Pin(12, machine.Pin.OUT)
+accionventilador = machine.Pin(22, machine.Pin.OUT)
 
 filtro = "apagado"
 flagfiltro = 1
-accionfiltro = machine.Pin(11, machine.Pin.OUT)
+accionfiltro = machine.Pin(23, machine.Pin.OUT)
 
 alimentar = 0
 # Pines del motor paso a paso (ULN2003 o similar)
-IN1 = machine.Pin(14, machine.Pin.OUT)  # Cambiar a los pines que uses
-IN2 = machine.Pin(27, machine.Pin.OUT)
-IN3 = machine.Pin(26, machine.Pin.OUT)
-IN4 = machine.Pin(25, machine.Pin.OUT)
+IN1 = machine.Pin(25, machine.Pin.OUT)  # Cambiar a los pines que uses
+IN2 = machine.Pin(26, machine.Pin.OUT)
+IN3 = machine.Pin(32, machine.Pin.OUT)
+IN4 = machine.Pin(33, machine.Pin.OUT)
 
 datos = {
     'temperatura': 0.0,
     'turbidez': 0.0,
-    'temperaturasuperior': 25.0,
+    'setpointtemperatura': 25.0,
     'setpointturbidez': 2800.0,
     'periodo': 5,
     'modo': "manual"
@@ -144,10 +144,11 @@ def alimentar_si_corresponde():
     """Alimenta automáticamente a las 20:00 si está en modo automático."""
     global ultima_fecha_alimentacion
     if datos['modo'] == 'auto':
-        ahora = time.localtime()  # (año, mes, día, hora, minuto, segundo, día_sem, día_año)
-        hora, minuto = ahora[3], ahora[4]
-        fecha_hoy = (ahora[0], ahora[1], ahora[2])  # Año, mes, día
-        if hora == 20 and minuto == 0:
+        ahora = time.time()  # (año, mes, día, hora, minuto, segundo, día_sem, día_año)
+        tiempo_local = time.localtime(ahora)
+        hora, minuto = tiempo_local[3], tiempo_local[4]
+        fecha_hoy = (tiempo_local[0], tiempo_local[1], tiempo_local[2])  # Año, mes, día
+        if hora == 21 and 24 <= minuto <= 26:
             if ultima_fecha_alimentacion != fecha_hoy:
                 print("Alimentación automática")
                 mover_motor()
@@ -180,56 +181,57 @@ async def main(client):
             ntu = -1120.4 * voltaje_real**2 + 5742.3 * voltaje_real - 4352.9
             ntu = max(0, round(ntu, 2))  # Limitar a 0 si da negativo, redondear
             #print("Voltaje: ", voltaje)
-            datos=json.dumps(OrderedDict([
-                ('temperatura',temp),
-                ('turbidez',ntu)
-            ]))
-            await client.publish('prueba/'+CLIENT_ID, datos, qos = 1)
+            try:
+                datos['temperatura']=temp
+                datos['turbidez']=ntu
+                await client.publish('prueba/'+CLIENT_ID, json.dumps(datos), qos = 1)
+            except Exception as e:
+                print("Error al publicar datos:", e)
         except Exception as e:
             print("Error al leer los sensores:", e)
         try:
             if flagventilador == 1:
                 if ventilador == 'encendido':
-                    accionventilador.value(0)
+                    accionventilador.value(1)
                     print("Ventilador encendido manualmente")
                 elif ventilador == 'apagado':
-                    accionventilador.value(1)
+                    accionventilador.value(0)
                     print("Ventilador apagado manualmente")
             else:
                 if datos['temperatura'] > (datos['setpointtemperatura']+1.0):
-                    accionventilador.value(0)
-                else:
                     accionventilador.value(1)
+                else:
+                    accionventilador.value(0)
         except OSError as e:
             print("Ventilador NO Funciona")
         try:
             if flagcalentador == 1:
                 if calentador == 'encendido':
-                    accioncalentador.value(0)
+                    accioncalentador.value(1)
                     print("Calentador encendido manualmente")
                 elif calentador == 'apagado':
-                    accioncalentador.value(1)
+                    accioncalentador.value(0)
                     print("Calentador apagado manualmente")
             else:
                 if datos['temperatura'] < (datos['setpointtemperatura']-1.0):
-                    accioncalentador.value(0)
-                else:
                     accioncalentador.value(1)
+                else:
+                    accioncalentador.value(0)
         except OSError as e:
             print("Calentador NO Funciona")
         try:
             if flagfiltro == 1:
                 if filtro == 'encendido':
-                    accionfiltro.value(0)
+                    accionfiltro.value(1)
                     print("Filtro encendido manualmente")
                 elif filtro == 'apagado':
-                    accionfiltro.value(1)
+                    accionfiltro.value(0)
                     print("Filtro apagado manualmente")
             else:
                 if datos['turbidez'] > datos['setpointturbidez']:
-                    accionfiltro.value(0)
-                else:
                     accionfiltro.value(1)
+                else:
+                    accionfiltro.value(0)
         except OSError as e:
             print("Filtro NO Funciona")
         try:
