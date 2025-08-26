@@ -50,6 +50,7 @@ IN2 = machine.Pin(26, machine.Pin.OUT)
 IN3 = machine.Pin(32, machine.Pin.OUT)
 IN4 = machine.Pin(33, machine.Pin.OUT)
 
+estado = 0
 datos = {
     'temperatura': 0.0,
     'turbidez': 0.0,
@@ -58,9 +59,13 @@ datos = {
     'periodo': 5,
     'modo': "manual"
     }
-
+estados = {
+    'calentador': 0,
+    'ventilador': 0,
+    'filtro': 0
+}
 def sub_cb(topic, msg, retained):
-    global alimentar
+    global alimentar, estado
     global calentador, flagcalentador
     global ventilador, flagventilador
     global filtro, flagfiltro
@@ -96,6 +101,8 @@ def sub_cb(topic, msg, retained):
 
     elif topico == 'alimentar':
         alimentar = int(mensaje)
+    elif topico == 'estado':
+        estado = int(mensaje)
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -112,6 +119,7 @@ async def conn_han(client):
     await client.subscribe('calentador', 1)
     await client.subscribe('filtro', 1)
     await client.subscribe('alimentar', 1)
+    await client.subscribe('estado', 1)
 
 
 # Secuencia del motor (paso completo)
@@ -165,6 +173,7 @@ def alimentar_manual():
 
 
 async def main(client):
+    global estado
     await client.connect()
     await asyncio.sleep(2)  # Give broker time
     while True:
@@ -234,6 +243,15 @@ async def main(client):
                     accionfiltro.value(0)
         except OSError as e:
             print("Filtro NO Funciona")
+        try:
+            if estado == 1:
+                estados['calentador'] = accioncalentador.value()
+                estados['ventilador'] = accionventilador.value()
+                estados['filtro'] = accionfiltro.value()
+                await client.publish('estados/'+CLIENT_ID, json.dumps(estados), qos = 1)
+                estado = 0
+        except OSError as e:
+            print("Estado NO Funciona")
         try:
             alimentar_manual()
             alimentar_si_corresponde()
